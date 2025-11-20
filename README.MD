@@ -26,22 +26,23 @@
 
 <h2 align="center">Bibliotecas utilizadas</h2>
 
+
 [![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-%23EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![Transformers](https://img.shields.io/badge/🤗_Transformers-FFD21E?style=for-the-badge&logoColor=black)](https://huggingface.co/docs/transformers)
-[![Ultralytics](https://img.shields.io/badge/Ultralytics_YOLO-00A3E0?style=for-the-badge&logo=yolo&logoColor=white)](https://ultralytics.com/)
-[![OpenCV](https://img.shields.io/badge/OpenCV-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white)](https://opencv.org/)
-[![Tesseract](https://img.shields.io/badge/Tesseract_OCR-2B579A?style=for-the-badge&logo=python&logoColor=white)](https://github.com/tesseract-ocr/tesseract)
-[![EasyOCR](https://img.shields.io/badge/EasyOCR-FF6F61?style=for-the-badge&logo=python&logoColor=white)](https://github.com/JaidedAI/EasyOCR)
-[![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)](https://pandas.pydata.org/)
+[![TorchVision](https://img.shields.io/badge/torchvision-FF6F00?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/vision/stable/)
 [![NumPy](https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white)](https://numpy.org/)
-[![Matplotlib](https://img.shields.io/badge/Matplotlib-11557C?style=for-the-badge&logo=python&logoColor=white)](https://matplotlib.org/)
+[![Matplotlib](https://img.shields.io/badge/Matplotlib-11557C?style=for-the-badge&logo=matplotlib&logoColor=white)](https://matplotlib.org/)
+[![OpenCV](https://img.shields.io/badge/OpenCV-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white)](https://opencv.org/)
 [![Pillow](https://img.shields.io/badge/Pillow-3C8D40?style=for-the-badge&logo=python&logoColor=white)](https://pillow.readthedocs.io/)
+[![MediaPipe](https://img.shields.io/badge/MediaPipe-00897B?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
+[![collections-deque](https://img.shields.io/badge/collections%20deque-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://docs.python.org/3/library/collections.html#collections.deque)
+[![time](https://img.shields.io/badge/time-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://docs.python.org/3/library/time.html)
+[![math](https://img.shields.io/badge/math-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://docs.python.org/3/library/math.html)
 
 ## Cómo usar
 ### Primer paso: clonar este repositorio
 ```bash
-git clone "https://github.com/A-NullPointer/VC-P4-P4b"
+git clone "https://github.com/Javier-Castilla/VC-P5"
 ```
 ### Segundo paso: Activar tu environment e instalar dependencias
 > [!NOTE]
@@ -62,19 +63,23 @@ conda env create -f environment.yml
 Posteriormente, se activa el entorno:
 
 ```bash
-conda activate VC_P4
+conda activate VC_P5
 ```
 
 
 ### Tercer paso: ejecutar el cuaderno
-Finalmente, abriendo nuestro IDE favorito y teniendo instalado todo lo necesario para poder ejecutar notebooks, se puede ejecutar los cuadernos de la práctica [Practica_4.ipynb](P4/practica_4.ipynb) y [Practica_4b.ipynb](P4/practica_4b.ipynb) seleccionando el environment anteriormente creado.
+Finalmente, abriendo nuestro IDE favorito y teniendo instalado todo lo necesario para poder ejecutar notebooks, se puede ejecutar los cuadernos de la práctica [Practica_5.ipynb](P4/practica_5.ipynb) seleccionando el environment anteriormente creado.
 
 > [!IMPORTANT]
 > Todos los bloques de código deben ejecutarse en orden, de lo contrario, podría ocasionar problemas durante la ejecución del cuaderno.
 
 <h1 align="center">Tareas Práctica 5</h1>
 
+<h2 align="center">Entrenamiento del modelo</h2>
+
+
 <h2 align="center">Prototipo 1: Detector de Emociones</h2>
+
 
 <h2 align="center">Prototipo 2: Métricas de Atención</h2>
 
