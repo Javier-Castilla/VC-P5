@@ -38,6 +38,9 @@
 [![collections-deque](https://img.shields.io/badge/collections%20deque-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://docs.python.org/3/library/collections.html#collections.deque)
 [![time](https://img.shields.io/badge/time-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://docs.python.org/3/library/time.html)
 [![math](https://img.shields.io/badge/math-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://docs.python.org/3/library/math.html)
+[![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)](https://pandas.pydata.org/)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-%230F4B8A?style=for-the-badge&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
+
 
 ## Cómo usar
 ### Primer paso: clonar este repositorio
@@ -66,9 +69,8 @@ Posteriormente, se activa el entorno:
 conda activate VC_P5
 ```
 
-
 ### Tercer paso: ejecutar el cuaderno
-Finalmente, abriendo nuestro IDE favorito y teniendo instalado todo lo necesario para poder ejecutar notebooks, se puede ejecutar los cuadernos de la práctica [Practica_5.ipynb](P4/practica_5.ipynb) seleccionando el environment anteriormente creado.
+Finalmente, abriendo nuestro IDE favorito y teniendo instalado todo lo necesario para poder ejecutar notebooks, se puede ejecutar los cuadernos de la práctica [Practica5.ipynb](practica5.ipynb) seleccionando el environment anteriormente creado.
 
 > [!IMPORTANT]
 > Todos los bloques de código deben ejecutarse en orden, de lo contrario, podría ocasionar problemas durante la ejecución del cuaderno.
@@ -98,7 +100,7 @@ Las imágenes se encuentran almacenadas en un archivo `.csv`, donde cada fila co
 - Una columna con todos los píxeles de la imagen codificados como una cadena de texto, con valores separados por espacios.
 - Una columna `Usage` que indica si la muestra pertenece a entrenamiento, validación (PublicTest) o test (PrivateTest).
 
-A nivel de distribución, el dataset está particionado aproximadamente en un 70% para entrenamiento (28.709 imágenes) y el resto dividido entre validación y test. Además, el dataset presenta **desbalance de clases**, con mayor número de muestras en emociones como “Felicidad”, “Tristeza” y “Neutral”, lo que puede provocar que el modelo aprenda peor las clases minoritarias (por ejemplo “Disgusto”).
+A nivel de distribución, el dataset está particionado aproximadamente en un 80% para entrenamiento y el resto dividido entre validación y test. Además, el dataset presenta **desbalance de clases**, con mayor número de muestras en emociones como “Felicidad”, “Tristeza” y “Neutral”, lo que puede provocar que el modelo aprenda peor las clases minoritarias (por ejemplo “Disgusto”).
 
 ---
 
@@ -145,6 +147,7 @@ A nivel de transformaciones, se aplica típicamente:
 Para mejorar la capacidad de generalización del modelo y reducir el sobreajuste, se ha implementado un pipeline diferenciado de transformaciones según la fase:
 
 **Transformaciones de entrenamiento (con data augmentation):**
+
 - `RandomHorizontalFlip(p=0.5)`: flip horizontal con 50% de probabilidad, aprovechando la simetría de las expresiones faciales.
 - `RandomRotation(15)`: rotaciones aleatorias de ±15° para simular variaciones naturales de inclinación de cabeza.
 - `RandomResizedCrop(224, scale=(0.8, 1.0))`: crop y zoom aleatorio entre 80-100%, forzando robustez ante variaciones de escala y encuadre.
@@ -152,6 +155,7 @@ Para mejorar la capacidad de generalización del modelo y reducir el sobreajuste
 - `RandomAffine(degrees=0, translate=(0.1, 0.1))`: traslaciones aleatorias de hasta ±10% en ambos ejes.
 
 **Transformaciones de validación/test (sin augmentation):**
+
 - Solo se aplica `Resize(224, 224)` directo, sin alteraciones aleatorias, para evaluar el rendimiento real del modelo sobre datos sin distorsionar.
 
 Esta estrategia permite que durante el entrenamiento el modelo vea versiones diversas de cada imagen en cada época (actuando como regularización implícita), mientras que en evaluación se mide el rendimiento sobre imágenes sin modificaciones artificiales.
@@ -313,6 +317,10 @@ Seguidamente, la matriz de confusión a partir de la inferencia del modelo sobre
 <img src="confusion_matrix.png">
 </div>
 
+<div align="center">
+<img src="normalized_confusion_matrix.png">
+</div>
+
 ---
 
 ### Ejemplo de uso del modelo entrenado (inferencias)
@@ -351,6 +359,105 @@ Este pipeline se integra posteriormente en el prototipo (por ejemplo, sobre fram
 
 
 <h2 align="center">Prototipo 1: Detector de Emociones</h2>
+
+Para cada emoción predicha se crea una función que gestiona el dibujo a añadir sobre el rostro usando las fomas geométricas de opencv para crear un dibujo final.
+
+Por ejemplo, en el caso de los fantasmas para la emoción de miedo se usa la mitad de una elipse para la cabeza unida a un rectángulo para el cuerpo y varios círculos para los ojos, boca y final del cuerpo.
+
+<div align="center">
+<img src="ghost.png">
+</div>
+
+El prototipo detecta las emociones en tiempo real analizando las expresiones faciales y aplicandole el efecto visual correspondiente según la emoción detectada. Utiliza el modelo de deep learning previamente entrenado.
+
+Se verifica primeramente si existe GPU disponible y así utilizarla para un procesamiento más rápido. Sino, emplea la CPU.
+
+```python
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f'Usando: {device}')
+```
+
+A continuación, se configura la red neuronal y se carga el modelo entrenado con los pesos preentrenados desde el archivo.
+Se activa el modo de evaluación y se transfiere el modelo a GPU o CPU según la disponibilidad.
+
+```python
+model.load_state_dict(torch.load('best_resnet18_finetuned.pth', map_location=device))
+model.eval()
+model.to(device)
+```
+
+Tras el preprocesamiento de las imágenes, donde se redimensionan las imágenes faciales al tamaño de la entrada estándas de ResNet y se normaliza, se utiliza el clasificador Haar Cascade de OpenCV para detectar el rostro.
+
+```python
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+```
+
+Se crea un diccionario para mapear cada emoción con su función de dibujo:
+
+```python
+EFFECT_FUNCTIONS = {
+    "Happy": draw_happy_effect,
+    "Sad": draw_sad_effect,
+    "Angry": draw_angry_effect,
+    "Surprise": draw_surprise_effect,
+    "Fear": draw_fear_effect,
+    "Disgust": draw_disgust_effect#,
+    #"Neutral": draw_neutral_effect
+}
+```
+Las funciones reciben el frame y las coordenadas del rostro detectado (x, y, w, h) para aplicar efectos visuales personalizados.
+
+Ahora sí, se inicializa la cámara y se procesa en bucle cada frame para convertirlo a escala de grises ya que es requerido por Haar Cascade.
+
+Para la predicción de la emoción se sigue le siguiente flujo:
+
+```python
+if len(faces) > 0:
+    (x, y, w, h) = faces[0]
+    
+    face_img = frame[y:y+h, x:x+w]
+    face_rgb = cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB)
+    face_pil = Image.fromarray(face_rgb)
+    face_tensor = preprocess(face_pil).unsqueeze(0).to(device)
+```
+
+1. Se queda con la primera cara detectada.
+2. Extrae la región del rostro usando coordenadas (x, y, w, h).
+3. Convierte BGR (OpenCV) a RGB (PyTorch).
+4. Convierte array NumPy a imagen PIL.
+5. Aplica transformaciones de preprocesamiento.
+6. Añade dimensión de batch con unsqueeze(0).
+7. Transfiere a GPU/CPU.
+
+A continuación, se obtiene el nivel de confianza de la predicción a partir de los logs generados.
+
+```python
+with torch.no_grad():
+    outputs = model(face_tensor)
+    probas = torch.softmax(outputs, dim=1)
+    pred_idx = probas.argmax(dim=1).item()
+    confidence = probas[0, pred_idx].item()
+
+emotion = EMOTIONS[pred_idx]
+```
+**torch.no_grad():** Desactiva el cálculo de gradientes y así ahorrar memoria.
+**model(face_tensor):** Genera logits para cada emoción.
+**torch.softmax():** Convierte logits a probabilidades​.
+**argmax():** Obtiene el índice de la emoción con mayor probabilidad.
+**confidence:** Nivel de confianza de la predicción en porcentaje.
+
+Por último, se aplica el efecto correspondiente a cada emoción predicha y se visualiza.
+
+Busca la función de efecto correspondiente a la emoción detectada y la aplica al frame. Si la emoción es "Neutral", no se aplica ningún efecto.
+
+Muestra la emoción detectada y su nivel de confianza en la esquina superior izquierda con color púrpura.
+
+Se permite guardar capturas secuencialmente al pulsar la tecla correspondiente a la letra "s" y salir pulsando ESC para proceder a librerar los recursos y cerrar la ventana correspondiente.
+
+<div align="center">
+<img src="Demo_detector_de_emociones.gif" width="600">
+</div>
+
 
 <h2 align="center">Prototipo 2: Métricas de Atención</h2>
 
@@ -553,11 +660,161 @@ def draw_dashboard(frame, attention_percent, is_attentive, metrics):
 
 ---
 
-### Limitaciones y posibles mejoras
+### Limitaciones
 
 **Limitaciones actuales:**
 - **Iluminación**: el rendimiento puede degradarse con iluminación muy baja o contraluz intenso, afectando la detección de landmarks.
 - **Múltiples personas**: actualmente procesa solo el rostro más prominente; podría extenderse a seguimiento multi-persona.
-- **Calibración fija**: los umbrales (EAR < 0.25, desviación < 0.03) son estáticos y podrían no ser óptimos para todos los usuarios.
+
+El bucle principal comienza con la inicialización de MediaPipe Face Mesh y la importación de los módulos necesarios.
+
+Los umbrales se configuran tal que:
+
+**BLINK_THRESHOLD** = 0.2: Umbral del EAR por debajo del cual se considera que el ojo está cerrado. Valor más bajo que el estándar (0.25) para mayor sensibilidad en la detección.
+
+**BLINK_COOLDOWN** = 0.3: Tiempo mínimo en segundos entre parpadeos consecutivos. Evita registrar múltiples parpadeos del mismo cierre de ojo (anti-rebote).
+
+A continuación se instancia la clase que acumula las estadísticas de la sesion `metrics = AttentionMetrics()`.
+
+Se abre la cámara y se muestra la información de control:
+
+- **ESC**: Salir de la aplicación
+- **r**: Reiniciar métricas sin cerrar la sesión
+
+La configuración de MediaPipe contiene los siguientes parámetros con el siguiente objetivo:
+
+```python
+is_blinking = False
+
+with mp_face_mesh.FaceMesh(
+    max_num_faces=1,
+    refine_landmarks=True,
+    min_detection_confidence=0.5,
+    min_tracking_confidence=0.5) as face_mesh:
+```
+
+**max_num_faces=1**: Detecta solo un rostro.
+
+**refine_landmarks=True**: Activa refinamiento adicional de landmarks alrededor de ojos y labios.
+
+**min_detection_confidence=0.5**: Confianza mínima del 50% para aceptar una detección inicial de rostro.
+
+**min_tracking_confidence=0.5**: Confianza mínima 50% para continuar el seguimiento del rostro entre frames.
+
+Y se procede entonces al procesamiento frame a frame:
+
+Se verifica primeramente que se haya detectado al menos un rostro (results.multi_face_landmarks) y se selecciona el primer rostro detectado.
+
+Se convierte los landmarks de formato MediaPipe a array NumPy con coordenadas normalizadas (x, y, z).
+
+```python
+is_attentive = False
+current_time = time.time()
+
+if results.multi_face_landmarks:
+    face_landmarks = results.multi_face_landmarks[0]
+    
+    h, w, _ = frame.shape
+    landmarks = np.array([(lm.x, lm.y, lm.z) for lm in face_landmarks.landmark])
+    
+    left_ear = calculate_eye_aspect_ratio(landmarks, LEFT_EYE)
+    right_ear = calculate_eye_aspect_ratio(landmarks, RIGHT_EYE)
+    avg_ear = (left_ear + right_ear) / 2.0
+```
+
+Se calcula el EAR independientemente para ojo izquierdo y derecho. Y luego el promedio de ambos.
+
+Si el EAR promedio cae por debajo del umbral (0.2), el ojo está cerrado. 
+
+Para registrar el parpadeo se verifica que no está actualmente en un parpadeo (not is_blinking) y que no haya pasado suficiente tiempo desde el último parpadeo (> 0.3s).
+
+Una vezcumpla ambas condiciones se registra incrementando el contador y se actualiza el timestamp. Cuando el EAR vuelve a subir, resetea la bandera is_blinking.
+
+```python
+if avg_ear < BLINK_THRESHOLD:
+    if not is_blinking and (current_time - metrics.last_blink_time) > BLINK_COOLDOWN:
+        metrics.blinks += 1
+        metrics.last_blink_time = current_time
+        is_blinking = True
+else:
+    is_blinking = False
+```
+
+Para la derección de atención se evalúa la orientación de la mirada.
+
+```python
+looking_at_camera = is_looking_at_camera(landmarks)
+
+if looking_at_camera:
+    is_attentive = True
+```
+
+Evalúa si el usuario está mirando directamente a la cámara mediante análisis geométrico de la posición de nariz y ojos y actualiza el estado de atención (is_attentive) que será usado para calcular el porcentaje de tiempo enfocado.
+
+```python
+metrics.update_attention(is_attentive)
+attention_percent = metrics.get_attention_percentage()
+
+draw_dashboard(frame, attention_percent, is_attentive, metrics)
+
+cv2.putText(frame, "Press 'ESC' to exit | 'R' to reset",
+           (10, frame.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+cv2.imshow('Attention Meter', frame)
+```
+
+**update_attention()**: Actualiza estadísticas acumuladas (tiempo total, tiempo atento).
+**get_attention_percentage()**: Calcula porcentaje de atención.
+**draw_dashboard()**: Renderiza el panel visual con todas las métricas.
+**Instrucciones**: Superpone texto con los controles.
+**Visualización**: Muestra el frame procesado en ventana.
+
+Una vez se finaliza el vídeo tras pulsar la tecla de ESC se liberan los recursos y se muestra el resumen consolidado del vídeo:
+
+- Porcentaje promedio de atención durante toda la sesión.
+- Número total de parpadeos detectados.
+- Frecuencia de parpadeo normalizada a parpadeos por minuto.
+
+<div align="center">
+<img src="Demo_detector_de_atencion.gif" width="600">
+</div>
 
 <h1 align="center">Bibliografía</h1>
+
+### Datasets y Bases de Datos
+- [FER2013 Dataset en Kaggle](https://www.kaggle.com/datasets/deadskull7/fer2013)
+
+### Documentación sobre Eye Aspect Ratio (EAR)
+
+- [Adjusting eye aspect ratio for strong eye blink detection - PMC](https://pmc.ncbi.nlm.nih.gov/articles/PMC9044337/)
+- [Real-Time Eye Blink Detection using Facial Landmarks - Soukupová & Čech (2016)](https://vision.fe.uni-lj.si/cvww2016/proceedings/papers/05.pdf)
+
+### MediaPipe y Face Mesh
+- [MediaPipe Face Mesh - Documentación Oficial GitHub](https://github.com/google-ai-edge/mediapipe/wiki/MediaPipe-Face-Mesh)
+- [MediaPipe: A Framework for Building Perception Pipelines - Google Research](https://developers.google.com/mediapipe)
+
+### PyTorch y ResNet
+- [PyTorch - Documentación Oficial](https://pytorch.org/)
+- [TorchVision - Documentación Oficial de resnet18](https://docs.pytorch.org/vision/stable/models/generated/torchvision.models.resnet18.html#torchvision.models.resnet18)
+
+### OpenCV y Haar Cascades
+- [OpenCV - Documentación Oficial](https://opencv.org/)
+- [Face Detection using Haar Cascades - OpenCV Documentation](https://docs.opencv.org/4.x/d2/d99/tutorial_js_face_detection.html)
+- [OpenCV Haar Cascades Tutorial - PyImageSearch](https://pyimagesearch.com/2021/04/12/opencv-haar-cascades/)
+
+### Reconocimiento de Emociones Faciales
+- [Facial Emotion Recognition In Real-Time - LearnOpenCV](https://learnopencv.com/facial-emotion-recognition/)
+- [Facial Emotion Recognition using OpenCV and Deepface - GitHub](https://github.com/manish-9245/Facial-Emotion-Recognition-using-OpenCV-and-Deepface)
+- [Emotion detection with Python and OpenCV - YouTube](https://www.youtube.com/watch?v=Vq_01gFG2vk)
+- [Training an Emotion Detection System using Python & PyTorch - YouTube](https://www.youtube.com/watch?v=AuTDY5o9ElI)
+
+### Librerías de Python
+- [NumPy - Documentación Oficial](https://numpy.org/)
+- [Matplotlib - Documentación Oficial](https://matplotlib.org/)
+- [Pillow (PIL Fork) - Documentación](https://pillow.readthedocs.io/)
+- [Pandas - Documentación Oficial](https://pandas.pydata.org/)
+- [scikit-learn - Machine Learning en Python](https://scikit-learn.org/)
+- [Python collections.deque - Documentación](https://docs.python.org/3/library/collections.html#collections.deque)
+- [Python time module - Documentación](https://docs.python.org/3/library/time.html)
+- [Python math module - Documentación](https://docs.python.org/3/library/math.html)
+
